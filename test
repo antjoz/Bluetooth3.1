@@ -5,7 +5,7 @@ using System.Windows.Forms;
 using InTheHand.Net;
 using InTheHand.Net.Bluetooth;
 using InTheHand.Net.Sockets;
-using InTheHand.Net.Obex;
+
 
 namespace Bluetooth3._1
 {
@@ -14,7 +14,6 @@ namespace Bluetooth3._1
         private BluetoothClient bluetoothClient;
         private BluetoothDeviceInfo[] devices;
 
-        // OBEX Listener
         private Thread obexListenerThread;
         private bool obexListening = true;
 
@@ -31,10 +30,6 @@ namespace Bluetooth3._1
         private void Form1_Load(object sender, EventArgs e)
         {
         }
-
-        // =========================
-        // WYSZUKIWANIE URZĄDZEŃ
-        // =========================
         private void btnSearch_Click(object sender, EventArgs e)
         {
             listDevices.Items.Clear();
@@ -58,9 +53,6 @@ namespace Bluetooth3._1
             }
         }
 
-        // =========================
-        // PAROWANIE
-        // =========================
         private void btnConnect_Click(object sender, EventArgs e)
         {
             if (listDevices.SelectedIndex == -1)
@@ -88,9 +80,6 @@ namespace Bluetooth3._1
             }
         }
 
-        // =========================
-        // WYSYŁANIE PLIKU (OBEX)
-        // =========================
         private void btnSendFile_Click(object sender, EventArgs e)
         {
             if (listDevices.SelectedIndex == -1)
@@ -135,9 +124,6 @@ namespace Bluetooth3._1
             }
         }
 
-        // =========================
-        // ODBIERANIE PLIKÓW (OBEX)
-        // =========================
         private void StartObexListener()
         {
             obexListenerThread = new Thread(ObexListenerWorker)
@@ -204,9 +190,6 @@ namespace Bluetooth3._1
             }
         }
 
-        // =========================
-        // ZAMYKANIE APLIKACJI
-        // =========================
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
             obexListening = false;

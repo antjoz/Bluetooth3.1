@@ -5,7 +5,7 @@ using System.Windows.Forms;
 using InTheHand.Net;
 using InTheHand.Net.Bluetooth;
 using InTheHand.Net.Sockets;
-
+using InTheHand.Net.Obex;
 
 namespace Bluetooth3._1
 {
@@ -14,6 +14,7 @@ namespace Bluetooth3._1
         private BluetoothClient bluetoothClient;
         private BluetoothDeviceInfo[] devices;
 
+        // OBEX Listener
         private Thread obexListenerThread;
         private bool obexListening = true;
 
@@ -31,6 +32,9 @@ namespace Bluetooth3._1
         {
         }
 
+        // =========================
+        // WYSZUKIWANIE URZĄDZEŃ
+        // =========================
         private void btnSearch_Click(object sender, EventArgs e)
         {
             listDevices.Items.Clear();
@@ -54,6 +58,9 @@ namespace Bluetooth3._1
             }
         }
 
+        // =========================
+        // PAROWANIE
+        // =========================
         private void btnConnect_Click(object sender, EventArgs e)
         {
             if (listDevices.SelectedIndex == -1)
@@ -81,6 +88,9 @@ namespace Bluetooth3._1
             }
         }
 
+        // =========================
+        // WYSYŁANIE PLIKU (OBEX)
+        // =========================
         private void btnSendFile_Click(object sender, EventArgs e)
         {
             if (listDevices.SelectedIndex == -1)
@@ -125,6 +135,9 @@ namespace Bluetooth3._1
             }
         }
 
+        // =========================
+        // ODBIERANIE PLIKÓW (OBEX)
+        // =========================
         private void StartObexListener()
         {
             obexListenerThread = new Thread(ObexListenerWorker)
@@ -136,34 +149,40 @@ namespace Bluetooth3._1
 
         private void ObexListenerWorker()
         {
+            ObexListener listener = null;
+
             try
             {
-                ObexListener listener = new ObexListener(ObexTransport.Bluetooth);
+                listener = new ObexListener(ObexTransport.Bluetooth);
                 listener.Start();
 
                 while (obexListening)
                 {
-                    // CZEKA NA PLIK
                     ObexListenerContext context = listener.GetContext();
+
+                    if (context == null || context.Request == null)
+                        continue;
+
                     ObexListenerRequest request = context.Request;
+
+                    string rawUrl = request.RawUrl;
+                    if (string.IsNullOrEmpty(rawUrl))
+                        continue;
+
+                    string fileName = rawUrl.TrimStart('/');
 
                     string folder = Path.Combine(
                         Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
                         "Odebrane"
                     );
 
-                    if (!Directory.Exists(folder))
-                        Directory.CreateDirectory(folder);
+                    Directory.CreateDirectory(folder);
 
-                    string filePath = Path.Combine(
-                        folder,
-                        request.RawUrl.TrimStart('/')
-                    );
+                    string filePath = Path.Combine(folder, fileName);
 
                     // ZAPIS PLIKU
                     request.WriteFile(filePath);
 
-                    // UI
                     Invoke(new Action(() =>
                     {
                         lblStatus.Text =
@@ -171,8 +190,6 @@ namespace Bluetooth3._1
                             Path.GetFileName(filePath);
                     }));
                 }
-
-                listener.Stop();
             }
             catch (Exception ex)
             {
@@ -181,13 +198,22 @@ namespace Bluetooth3._1
                     MessageBox.Show("Błąd odbierania: " + ex.Message);
                 }));
             }
+            finally
+            {
+                listener?.Stop();
+            }
         }
 
-
+        // =========================
+        // ZAMYKANIE APLIKACJI
+        // =========================
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
             obexListening = false;
-            obexListenerThread?.Abort();
+
+            if (obexListenerThread != null && obexListenerThread.IsAlive)
+                obexListenerThread.Abort();
+
             bluetoothClient?.Dispose();
         }
     }

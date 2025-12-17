@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 using System.Windows.Forms;
 using InTheHand.Net;
@@ -92,22 +92,23 @@ namespace Bluetooth3._1
                 return;
 
             BluetoothDeviceInfo device = devices[listDevices.SelectedIndex];
-            Guid serviceClass = BluetoothService.ObexObjectPush;
 
             try
             {
-                using (BluetoothClient client = new BluetoothClient())
-                {
-                    client.Connect(device.DeviceAddress, serviceClass);
+                Uri uri = new Uri(
+                    "obex://" +
+                    device.DeviceAddress.ToString().Replace(":", "") +
+                    "/" +
+                    Path.GetFileName(ofd.FileName)
+                );
 
-                    using (Stream stream = client.GetStream())
-                    using (FileStream fs = File.OpenRead(ofd.FileName))
-                    {
-                        fs.CopyTo(stream);
-                    }
-                }
+                ObexWebRequest request = new ObexWebRequest(uri);
+                request.ReadFile(ofd.FileName);
 
-                lblStatus.Text = "Status: plik wysłany poprawnie";
+                ObexWebResponse response = (ObexWebResponse)request.GetResponse();
+                response.Close();
+
+                lblStatus.Text = "Status: plik wysłany poprawnie (OBEX)";
             }
             catch (Exception ex)
             {
@@ -115,6 +116,7 @@ namespace Bluetooth3._1
                 lblStatus.Text = "Status: błąd wysyłania";
             }
         }
+
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
             bluetoothClient?.Dispose();
